@@ -26,7 +26,7 @@ namespace CodeWarsRepoMaker
             Console.WriteLine("Enter repo name");
             var repoName = Console.ReadLine();
             Console.WriteLine("Enter implementation class name");
-            var implClass = Console.ReadLine();
+            var implClassName = Console.ReadLine();
             Console.WriteLine("Enter proplem url");
             var problemUrl = Console.ReadLine();
 
@@ -39,8 +39,10 @@ namespace CodeWarsRepoMaker
             // copy everything from scaffold folder and rename
             CopyDirectoryAndAllContents(RubyScaffoldDir, dir);
             // replace token with test filename in launch.json
+            ReplaceTestFileToken(implClassName, dir);
             // add implClass and test file
-            //
+            File.Create(Path.Combine(dir, $"{implClassName}.rb"));
+            File.Create(Path.Combine(dir, $"{implClassName}Tests.rb"));
             // git init
             // git add .
             // git commit -am "Initial commit"
@@ -48,6 +50,14 @@ namespace CodeWarsRepoMaker
             // git remote add origin githubUrl
             // git push -u origin master
             Console.WriteLine("Done successfully");
+        }
+
+        private static void ReplaceTestFileToken(string implClassName, string dir)
+        {
+            var path = Path.Combine(dir, @".vscode\launch.json");
+            var text = File.ReadAllText(path);
+            text = text.Replace(TestNameTokenReplace, implClassName + "Tests");
+            File.WriteAllText(path, text);
         }
 
         private static void CopyDirectoryAndAllContents(string sourcePath, string destinationPath)
