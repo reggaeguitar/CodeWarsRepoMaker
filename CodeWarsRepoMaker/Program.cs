@@ -9,9 +9,11 @@ namespace CodeWarsRepoMaker
 {
     class Program
     {
-        static readonly string BaseDir = @"c:\p";
+        const string BaseDir = @"c:\p";
+        const string TestNameTokenReplace = "${TestNameTokenReplace}";
+        const string Username = "reggaeguitar";
         static readonly string RubyScaffoldDir = Path.Join(BaseDir, "RubyScaffold");
-        static readonly string TestNameTokenReplace = "${TestNameTokenReplace}";
+
 
         static void Main(string[] args)
         {
@@ -33,8 +35,16 @@ namespace CodeWarsRepoMaker
             var implClassName = Console.ReadLine();
             Console.WriteLine("Enter proplem url");
             var problemUrl = Console.ReadLine();
-            Console.WriteLine("Enter github password");
-            var githubPassword = Console.ReadLine();
+
+            Console.WriteLine("Create github repo? (y/n)");
+            var createGitHubRepo = Console.ReadLine().Trim().ToLower() == "y";
+
+            string githubPassword = null;
+            if (createGitHubRepo)
+            {
+                Console.WriteLine("Enter github password");
+                githubPassword = Console.ReadLine();
+            }
 
             //
             var dir = Path.Join(BaseDir, repoName);
@@ -52,10 +62,15 @@ namespace CodeWarsRepoMaker
 
             // git stuff
             DoFirstCommit(dir);
-            // create repo on github with description = $"Solution to {problemUrl}"
-            CreateRepoWithSelenium("reggaeguitar", githubPassword, repoName, problemUrl);
-            // todo push seems to not be working, probably because of two factor authentication
-            AddRemoteAndPush(dir, repoName);
+
+            if (createGitHubRepo)
+            {
+                // create repo on github with description = $"Solution to {problemUrl}"
+                CreateRepoWithSelenium(githubPassword, repoName, problemUrl);
+                // todo push seems to not be working, probably because of two factor authentication
+                AddRemoteAndPush(dir, repoName);
+            }
+
             // open vscode
             RunCommandViaPS(dir, "code .");
             Console.WriteLine("Done successfully");
@@ -63,9 +78,9 @@ namespace CodeWarsRepoMaker
 
         private static void AddRemoteAndPush(string directory, string repoName)
         {
-            // git remote add origin https://github.com/reggaeguitar/repoTestCreation.git
+            // git remote add origin https://github.com/{Username}/{repoName}.git
             // git push -u origin master
-            var gitUrl = $"https://github.com/reggaeguitar/{repoName}.git";
+            var gitUrl = $"https://github.com/{Username}/{repoName}.git";
             RunGitCommand(directory, @"remote add origin " + gitUrl);
             RunGitCommand(directory, @"push -u origin master");
         }
@@ -83,7 +98,7 @@ namespace CodeWarsRepoMaker
             RunCommandViaPS(directory, fullCommand);
         }
 
-        private static void CreateRepoWithSelenium(string username, string password, string repoName, string problemUrl)
+        private static void CreateRepoWithSelenium(string password, string repoName, string problemUrl)
         {
             const string btnClass = "btn-primary";
             IWebDriver driver = new FirefoxDriver
@@ -92,7 +107,7 @@ namespace CodeWarsRepoMaker
             };            
             // login page
             IWebElement usernameBox = driver.FindElement(By.Id("login_field"));
-            usernameBox.SendKeys(username);
+            usernameBox.SendKeys(Username);
 
             IWebElement passwordBox = driver.FindElement(By.Id("password"));
             passwordBox.SendKeys(password);
