@@ -1,7 +1,13 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using OpenQA.Selenium;
+using OpenQA.Selenium.Firefox;
+using System;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Management.Automation;
+using System.Net.Http;
+using System.Security.AccessControl;
+using System.Text;
 
 namespace CodeWarsRepoMaker
 {
@@ -25,6 +31,8 @@ namespace CodeWarsRepoMaker
 
         static void MainImpl()
         {
+            Console.WriteLine("Enter github password");
+            var githubPassword = Console.ReadLine();
             Console.WriteLine("Enter repo name");
             var repoName = Console.ReadLine();
             Console.WriteLine("Enter implementation class name");
@@ -49,26 +57,88 @@ namespace CodeWarsRepoMaker
             // git stuff
             DoFirstCommit(dir);
             // create repo on github with description = $"Solution to {problemUrl}"
-            // git remote add origin githubUrl
-            // git push -u origin master
+            CreateRepoWithSelenium("reggaeguitar", githubPassword, repoName, problemUrl);           
+            AddRemoteAndPush(dir, repoName);
+            // open vscode
+            RunCommandViaPS(dir, "code .");
             Console.WriteLine("Done successfully");
         }
 
-        public static void DoFirstCommit(string directory)
+        private static void AddRemoteAndPush(string directory, string repoName)
         {
-            RunCommandViaPS(directory, @"git init");
-            RunCommandViaPS(directory, @"git add .");
-            RunCommandViaPS(directory, @"git commit -am 'Initial commit'");            
+            //git remote add origin https://github.com/reggaeguitar/repoTestCreation.git
+            //git push -u origin master
+            var gitUrl = $"https://github.com/reggaeguitar/{repoName}.git";
+            RunGitCommand(directory, @"remote add origin " + gitUrl);
+            RunGitCommand(directory, @"push -u origin master");
         }
 
+        private static void DoFirstCommit(string directory)
+        {
+            RunGitCommand(directory, @"init");
+            RunGitCommand(directory, @"add .");
+            RunGitCommand(directory, @"commit -am 'Initial commit'");            
+        }
+
+        private static void RunGitCommand(string directory, string command)
+        {
+            var fullCommand = $"git {command}";
+            RunCommandViaPS(directory, fullCommand);
+        }
+
+        private static void CreateRepoWithSelenium(string username, string password, string repoName, string problemUrl)
+        {
+            const string btnClass = "btn-primary";
+            IWebDriver driver = new FirefoxDriver
+            {
+                Url = "https://github.com/new"
+            };            
+            // login page
+            IWebElement usernameBox = driver.FindElement(By.Id("login_field"));
+            usernameBox.SendKeys(username);
+
+            IWebElement passwordBox = driver.FindElement(By.Id("password"));
+            passwordBox.SendKeys(password);
+
+            var stupidKasperskyPopup = driver.FindElement(By.TagName("iframe"));
+            stupidKasperskyPopup.Click();
+
+            clickMainButtonOnPage();
+
+            // verification code
+            Console.WriteLine("Enter github verification code");
+            var verificationCode = Console.ReadLine();
+
+            IWebElement verificationCodeBox = driver.FindElement(By.Id("otp"));
+            verificationCodeBox.SendKeys(verificationCode);
+
+            clickMainButtonOnPage();
+
+            // new repo page
+            IWebElement repoNameBox = driver.FindElement(By.Id("repository_name"));
+            repoNameBox.SendKeys(repoName);
+
+            IWebElement repoDescriptionBox = driver.FindElement(By.Id("repository_description"));
+            var description = $"Solution to this{problemUrl}";
+            repoDescriptionBox.SendKeys(description);
+
+            //clickMainButtonOnPage();
+            var element = driver.FindElement(By.ClassName("first-in-line"));
+            ((IJavaScriptExecutor)driver).ExecuteScript("arguments[0].scrollIntoView(true);", element);
+            element.Click();
+
+            void clickMainButtonOnPage()
+            {
+                driver.FindElement(By.ClassName(btnClass)).Click();
+            }
+        }
+        
         private static void RunCommandViaPS(string directory, string command)
         {
-            using (PowerShell powershell = PowerShell.Create())
-            {
-                powershell.AddScript($"cd {directory}");
-                powershell.AddScript(command);
-                Collection<PSObject> results = powershell.Invoke();
-            }
+            using PowerShell powershell = PowerShell.Create();
+            powershell.AddScript($"cd {directory}");
+            powershell.AddScript(command);
+            Collection<PSObject> results = powershell.Invoke();
         }
 
         private static void ReplaceTestFileToken(string implClassName, string dir)
