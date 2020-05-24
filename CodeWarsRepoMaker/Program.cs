@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.ObjectModel;
 using System.IO;
+using System.Management.Automation;
 
 namespace CodeWarsRepoMaker
 {
@@ -41,15 +43,32 @@ namespace CodeWarsRepoMaker
             // replace token with test filename in launch.json
             ReplaceTestFileToken(implClassName, dir);
             // add implClass and test file
-            File.Create(Path.Combine(dir, $"{implClassName}.rb"));
-            File.Create(Path.Combine(dir, $"{implClassName}Tests.rb"));
-            // git init
-            // git add .
-            // git commit -am "Initial commit"
+
+            using (FileStream fs = File.Create(Path.Combine(dir, $"{implClassName}.rb"))) { }
+            using (FileStream fs = File.Create(Path.Combine(dir, $"{implClassName}Tests.rb"))) { }
+            // git stuff
+            DoFirstCommit(dir);
             // create repo on github with description = $"Solution to {problemUrl}"
             // git remote add origin githubUrl
             // git push -u origin master
             Console.WriteLine("Done successfully");
+        }
+
+        public static void DoFirstCommit(string directory)
+        {
+            RunCommandViaPS(directory, @"git init");
+            RunCommandViaPS(directory, @"git add .");
+            RunCommandViaPS(directory, @"git commit -am 'Initial commit'");            
+        }
+
+        private static void RunCommandViaPS(string directory, string command)
+        {
+            using (PowerShell powershell = PowerShell.Create())
+            {
+                powershell.AddScript($"cd {directory}");
+                powershell.AddScript(command);
+                Collection<PSObject> results = powershell.Invoke();
+            }
         }
 
         private static void ReplaceTestFileToken(string implClassName, string dir)
@@ -60,14 +79,16 @@ namespace CodeWarsRepoMaker
             File.WriteAllText(path, text);
         }
 
+        // from tboswell's answer on
+        // https://stackoverflow.com/questions/58744/copy-the-entire-contents-of-a-directory-in-c-sharp/58820
         private static void CopyDirectoryAndAllContents(string sourcePath, string destinationPath)
         {
-            //Now Create all of the directories
+            // Now Create all of the directories
             foreach (string dirPath in Directory.GetDirectories(sourcePath, "*",
                 SearchOption.AllDirectories))
                 Directory.CreateDirectory(dirPath.Replace(sourcePath, destinationPath));
 
-            //Copy all the files & Replaces any files with the same name
+            // Copy all the files & Replaces any files with the same name
             foreach (string newPath in Directory.GetFiles(sourcePath, "*.*",
                 SearchOption.AllDirectories))
                 File.Copy(newPath, newPath.Replace(sourcePath, destinationPath), true);
