@@ -1,13 +1,9 @@
-﻿using Newtonsoft.Json;
-using OpenQA.Selenium;
+﻿using OpenQA.Selenium;
 using OpenQA.Selenium.Firefox;
 using System;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Management.Automation;
-using System.Net.Http;
-using System.Security.AccessControl;
-using System.Text;
 
 namespace CodeWarsRepoMaker
 {
@@ -31,14 +27,14 @@ namespace CodeWarsRepoMaker
 
         static void MainImpl()
         {
-            Console.WriteLine("Enter github password");
-            var githubPassword = Console.ReadLine();
             Console.WriteLine("Enter repo name");
             var repoName = Console.ReadLine();
             Console.WriteLine("Enter implementation class name");
             var implClassName = Console.ReadLine();
             Console.WriteLine("Enter proplem url");
             var problemUrl = Console.ReadLine();
+            Console.WriteLine("Enter github password");
+            var githubPassword = Console.ReadLine();
 
             //
             var dir = Path.Join(BaseDir, repoName);
@@ -51,13 +47,14 @@ namespace CodeWarsRepoMaker
             // replace token with test filename in launch.json
             ReplaceTestFileToken(implClassName, dir);
             // add implClass and test file
-
             using (FileStream fs = File.Create(Path.Combine(dir, $"{implClassName}.rb"))) { }
             using (FileStream fs = File.Create(Path.Combine(dir, $"{implClassName}Tests.rb"))) { }
+
             // git stuff
             DoFirstCommit(dir);
             // create repo on github with description = $"Solution to {problemUrl}"
-            CreateRepoWithSelenium("reggaeguitar", githubPassword, repoName, problemUrl);           
+            CreateRepoWithSelenium("reggaeguitar", githubPassword, repoName, problemUrl);
+            // todo push seems to not be working, probably because of two factor authentication
             AddRemoteAndPush(dir, repoName);
             // open vscode
             RunCommandViaPS(dir, "code .");
@@ -66,8 +63,8 @@ namespace CodeWarsRepoMaker
 
         private static void AddRemoteAndPush(string directory, string repoName)
         {
-            //git remote add origin https://github.com/reggaeguitar/repoTestCreation.git
-            //git push -u origin master
+            // git remote add origin https://github.com/reggaeguitar/repoTestCreation.git
+            // git push -u origin master
             var gitUrl = $"https://github.com/reggaeguitar/{repoName}.git";
             RunGitCommand(directory, @"remote add origin " + gitUrl);
             RunGitCommand(directory, @"push -u origin master");
@@ -119,10 +116,10 @@ namespace CodeWarsRepoMaker
             repoNameBox.SendKeys(repoName);
 
             IWebElement repoDescriptionBox = driver.FindElement(By.Id("repository_description"));
-            var description = $"Solution to this{problemUrl}";
+            var description = $"Solution to this {problemUrl}";
             repoDescriptionBox.SendKeys(description);
 
-            //clickMainButtonOnPage();
+            // scroll down to see Create Repository button
             var element = driver.FindElement(By.ClassName("first-in-line"));
             ((IJavaScriptExecutor)driver).ExecuteScript("arguments[0].scrollIntoView(true);", element);
             element.Click();
