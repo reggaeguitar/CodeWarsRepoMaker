@@ -4,6 +4,7 @@ using System;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Management.Automation;
+using System.Text;
 
 namespace CodeWarsRepoMaker
 {
@@ -12,6 +13,7 @@ namespace CodeWarsRepoMaker
         const string BaseDir = @"c:\p";
         const string TestNameTokenReplace = "${TestNameTokenReplace}";
         const string Username = "reggaeguitar";
+        const string Orgname = "BlackCatEnterprises";
         static readonly string RubyScaffoldDir = Path.Join(BaseDir, "RubyScaffold");
 
 
@@ -42,6 +44,7 @@ namespace CodeWarsRepoMaker
             string githubPassword = null;
             if (createGitHubRepo)
             {
+                // todo mask or eat password characters the user enters
                 Console.WriteLine("Enter github password");
                 githubPassword = Console.ReadLine();
             }
@@ -55,10 +58,16 @@ namespace CodeWarsRepoMaker
             // copy everything from scaffold folder and rename
             CopyDirectoryAndAllContents(RubyScaffoldDir, dir);
             // replace token with test filename in launch.json
-            ReplaceTestFileToken(implClassName, dir);
+            ReplaceTestFileTokenInLaunchJson(implClassName, dir);
             // add implClass and test file
             using (FileStream fs = File.Create(Path.Combine(dir, $"{implClassName}.rb"))) { }
-            using (FileStream fs = File.Create(Path.Combine(dir, $"{implClassName}Tests.rb"))) { }
+            using (FileStream fs = File.Create(Path.Combine(dir, $"{implClassName}Tests.rb"))) 
+            {
+                var firstLineOfFile = $"load \"{implClassName}.rb\"";
+                var utf8 = new UTF8Encoding();
+                byte[] asBytes = utf8.GetBytes(firstLineOfFile);
+                fs.Write(asBytes);
+            }
 
             // git stuff
             DoFirstCommit(dir);
@@ -80,7 +89,7 @@ namespace CodeWarsRepoMaker
         {
             // git remote add origin https://github.com/{Username}/{repoName}.git
             // git push -u origin master
-            var gitUrl = $"https://github.com/{Username}/{repoName}.git";
+            var gitUrl = $"https://github.com/{Orgname}/{repoName}.git";
             RunGitCommand(directory, @"remote add origin " + gitUrl);
             RunGitCommand(directory, @"push -u origin master");
         }
@@ -115,7 +124,7 @@ namespace CodeWarsRepoMaker
             var stupidKasperskyPopup = driver.FindElement(By.TagName("iframe"));
             stupidKasperskyPopup.Click();
 
-            clickMainButtonOnPage();
+            ClickMainButtonOnPage();
 
             // verification code
             Console.WriteLine("Enter github verification code");
@@ -124,9 +133,15 @@ namespace CodeWarsRepoMaker
             IWebElement verificationCodeBox = driver.FindElement(By.Id("otp"));
             verificationCodeBox.SendKeys(verificationCode);
 
-            clickMainButtonOnPage();
+            ClickMainButtonOnPage();
 
-            // new repo page
+            // get to org page
+            driver.Navigate().GoToUrl($"https://github.com/{Orgname}");
+            var classesOnNewRepoButton = "btn btn-primary d-flex flex-items-center flex-justify-center width-auto ml-md-3";
+            var newRepoButton = driver.FindElement(By.CssSelector($"a[class='{classesOnNewRepoButton}']"));
+            ScrollAndClick(newRepoButton);
+            
+            // now at new repo page
             IWebElement repoNameBox = driver.FindElement(By.Id("repository_name"));
             repoNameBox.SendKeys(repoName);
 
@@ -135,14 +150,19 @@ namespace CodeWarsRepoMaker
             repoDescriptionBox.SendKeys(description);
 
             // scroll down to see Create Repository button
-            var element = driver.FindElement(By.ClassName("first-in-line"));
-            ((IJavaScriptExecutor)driver).ExecuteScript("arguments[0].scrollIntoView(true);", element);
-            element.Click();
+            var createRepoButton = driver.FindElement(By.ClassName("first-in-line"));
+            ScrollAndClick(createRepoButton);
 
-            void clickMainButtonOnPage()
+            void ClickMainButtonOnPage() => GetMainButton().Click();
+
+            void ScrollAndClick(IWebElement element)
             {
-                driver.FindElement(By.ClassName(btnClass)).Click();
+                //((IJavaScriptExecutor)driver).ExecuteScript("arguments[0].scrollIntoView(true);", element);
+                ((IJavaScriptExecutor)driver).ExecuteScript($"window.scrollTo({element.Location.X},{element.Location.Y})");
+                element.Click();
             }
+
+            IWebElement GetMainButton() => driver.FindElement(By.ClassName(btnClass));
         }
         
         private static void RunCommandViaPS(string directory, string command)
@@ -153,7 +173,7 @@ namespace CodeWarsRepoMaker
             Collection<PSObject> results = powershell.Invoke();
         }
 
-        private static void ReplaceTestFileToken(string implClassName, string dir)
+        private static void ReplaceTestFileTokenInLaunchJson(string implClassName, string dir)
         {
             var path = Path.Combine(dir, @".vscode\launch.json");
             var text = File.ReadAllText(path);
