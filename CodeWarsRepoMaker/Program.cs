@@ -17,7 +17,7 @@ namespace CodeWarsRepoMaker
         static readonly string RubyScaffoldDir = Path.Join(BaseDir, "RubyScaffold");
 
 
-        static void Main(string[] args)
+        static void Main()
         {
             try
             {
@@ -26,6 +26,7 @@ namespace CodeWarsRepoMaker
             catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
+                throw;
             }
         }
 
@@ -63,9 +64,13 @@ namespace CodeWarsRepoMaker
             using (FileStream fs = File.Create(Path.Combine(dir, $"{implClassName}.rb"))) { }
             using (FileStream fs = File.Create(Path.Combine(dir, $"{implClassName}Tests.rb"))) 
             {
-                var firstLineOfFile = $"load \"{implClassName}.rb\"";
+                var fileContents = $"load \"{implClassName}.rb\"";
+                fileContents += Environment.NewLine + Environment.NewLine +
+@"def assert_equals a, b
+  puts a == b
+end" + Environment.NewLine + Environment.NewLine;
                 var utf8 = new UTF8Encoding();
-                byte[] asBytes = utf8.GetBytes(firstLineOfFile);
+                byte[] asBytes = utf8.GetBytes(fileContents);
                 fs.Write(asBytes);
             }
 
@@ -87,7 +92,7 @@ namespace CodeWarsRepoMaker
 
         private static void AddRemoteAndPush(string directory, string repoName)
         {
-            // git remote add origin https://github.com/{Username}/{repoName}.git
+            // git remote add origin https://github.com/{Orgname}/{repoName}.git
             // git push -u origin master
             var gitUrl = $"https://github.com/{Orgname}/{repoName}.git";
             RunGitCommand(directory, @"remote add origin " + gitUrl);
@@ -122,7 +127,7 @@ namespace CodeWarsRepoMaker
             passwordBox.SendKeys(password);
 
             var stupidKasperskyPopup = driver.FindElement(By.TagName("iframe"));
-            stupidKasperskyPopup.Click();
+            stupidKasperskyPopup?.Click();
 
             ClickMainButtonOnPage();
 
@@ -157,12 +162,13 @@ namespace CodeWarsRepoMaker
 
             void ScrollAndClick(IWebElement element)
             {
-                //((IJavaScriptExecutor)driver).ExecuteScript("arguments[0].scrollIntoView(true);", element);
                 ((IJavaScriptExecutor)driver).ExecuteScript($"window.scrollTo({element.Location.X},{element.Location.Y})");
                 element.Click();
             }
 
             IWebElement GetMainButton() => driver.FindElement(By.ClassName(btnClass));
+
+            driver.Close();
         }
         
         private static void RunCommandViaPS(string directory, string command)
