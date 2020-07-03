@@ -14,8 +14,6 @@ namespace CodeWarsRepoMaker
         const string TestNameTokenReplace = "${TestNameTokenReplace}";
         const string Username = "reggaeguitar";
         const string Orgname = "BlackCatEnterprises";
-        static readonly string RubyScaffoldDir = Path.Join(BaseDir, "RubyScaffold");
-
 
         static void Main()
         {
@@ -32,47 +30,13 @@ namespace CodeWarsRepoMaker
 
         static void MainImpl()
         {
-            Console.WriteLine("Enter repo name");
-            var repoName = Console.ReadLine();
-            Console.WriteLine("Enter implementation class name");
-            var implClassName = Console.ReadLine();
-            Console.WriteLine("Enter proplem url");
-            var problemUrl = Console.ReadLine();
+            var input = new Input();
+            var rubyRepoMaker = new RubyRepoMaker();
 
-            Console.WriteLine("Create github repo? (y/n)");
-            var createGitHubRepo = Console.ReadLine().Trim().ToLower() == "y";
-
-            string githubPassword = null;
-            if (createGitHubRepo)
-            {
-                // todo mask or eat password characters the user enters
-                Console.WriteLine("Enter github password");
-                githubPassword = Console.ReadLine();
-            }
+            var inputArgs = input.GetInput();
 
             //
-            var dir = Path.Join(BaseDir, repoName);
-            if (Directory.Exists(dir))
-            {
-                throw new Exception($"Directory {dir} already exists");
-            }
-            // copy everything from scaffold folder and rename
-            CopyDirectoryAndAllContents(RubyScaffoldDir, dir);
-            // replace token with test filename in launch.json
-            ReplaceTestFileTokenInLaunchJson(implClassName, dir);
-            // add implClass and test file
-            using (FileStream fs = File.Create(Path.Combine(dir, $"{implClassName}.rb"))) { }
-            using (FileStream fs = File.Create(Path.Combine(dir, $"{implClassName}Tests.rb"))) 
-            {
-                var fileContents = $"load \"{implClassName}.rb\"";
-                fileContents += Environment.NewLine + Environment.NewLine +
-@"def assert_equals a, b
-  puts a == b
-end" + Environment.NewLine + Environment.NewLine;
-                var utf8 = new UTF8Encoding();
-                byte[] asBytes = utf8.GetBytes(fileContents);
-                fs.Write(asBytes);
-            }
+            
 
             // git stuff
             DoFirstCommit(dir);
