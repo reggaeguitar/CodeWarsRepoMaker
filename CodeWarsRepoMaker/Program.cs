@@ -11,7 +11,6 @@ namespace CodeWarsRepoMaker
     class Program
     {
         const string BaseDir = @"c:\p";
-        const string TestNameTokenReplace = "${TestNameTokenReplace}";
         const string Username = "reggaeguitar";
         const string Orgname = "BlackCatEnterprises";
 
@@ -31,139 +30,24 @@ namespace CodeWarsRepoMaker
         static void MainImpl()
         {
             var input = new Input();
-            var rubyRepoMaker = new RubyRepoMaker();
+            var git = new Git();
 
             var inputArgs = input.GetInput();
 
-            //
-            
-
-            // git stuff
-            DoFirstCommit(dir);
-
-            if (createGitHubRepo)
+            IRepoMaker repoMaker = null;
+            switch (inputArgs.Language)
             {
-                // create repo on github with description = $"Solution to {problemUrl}"
-                CreateRepoWithSelenium(githubPassword, repoName, problemUrl);
-                // todo push seems to not be working, probably because of two factor authentication
-                AddRemoteAndPush(dir, repoName);
+                case Language.Ruby:
+                    repoMaker = new RubyRepoMaker(BaseDir);                    
+                    break;
             }
+            var dir = repoMaker.MakeRepo(inputArgs.RepoName, inputArgs.ImplClassName);
+
+            git.MakeGitHubRepo(dir, inputArgs, Orgname, Username);
 
             // open vscode
-            RunCommandViaPS(dir, "code .");
+            new PowershellRunner().RunCommandViaPS(dir, "code .");
             Console.WriteLine("Done successfully");
-        }
-
-        private static void AddRemoteAndPush(string directory, string repoName)
-        {
-            // git remote add origin https://github.com/{Orgname}/{repoName}.git
-            // git push -u origin master
-            var gitUrl = $"https://github.com/{Orgname}/{repoName}.git";
-            RunGitCommand(directory, @"remote add origin " + gitUrl);
-            RunGitCommand(directory, @"push -u origin master");
-        }
-
-        private static void DoFirstCommit(string directory)
-        {
-            RunGitCommand(directory, @"init");
-            RunGitCommand(directory, @"add .");
-            RunGitCommand(directory, @"commit -am 'Initial commit'");            
-        }
-
-        private static void RunGitCommand(string directory, string command)
-        {
-            var fullCommand = $"git {command}";
-            RunCommandViaPS(directory, fullCommand);
-        }
-
-        private static void CreateRepoWithSelenium(string password, string repoName, string problemUrl)
-        {
-            const string btnClass = "btn-primary";
-            IWebDriver driver = new FirefoxDriver
-            {
-                Url = "https://github.com/new"
-            };            
-            // login page
-            IWebElement usernameBox = driver.FindElement(By.Id("login_field"));
-            usernameBox.SendKeys(Username);
-
-            IWebElement passwordBox = driver.FindElement(By.Id("password"));
-            passwordBox.SendKeys(password);
-
-            var stupidKasperskyPopup = driver.FindElement(By.TagName("iframe"));
-            stupidKasperskyPopup?.Click();
-
-            ClickMainButtonOnPage();
-
-            // verification code
-            Console.WriteLine("Enter github verification code");
-            var verificationCode = Console.ReadLine();
-
-            IWebElement verificationCodeBox = driver.FindElement(By.Id("otp"));
-            verificationCodeBox.SendKeys(verificationCode);
-
-            ClickMainButtonOnPage();
-
-            // get to org page
-            driver.Navigate().GoToUrl($"https://github.com/{Orgname}");
-            var classesOnNewRepoButton = "btn btn-primary d-flex flex-items-center flex-justify-center width-auto ml-md-3";
-            var newRepoButton = driver.FindElement(By.CssSelector($"a[class='{classesOnNewRepoButton}']"));
-            ScrollAndClick(newRepoButton);
-            
-            // now at new repo page
-            IWebElement repoNameBox = driver.FindElement(By.Id("repository_name"));
-            repoNameBox.SendKeys(repoName);
-
-            IWebElement repoDescriptionBox = driver.FindElement(By.Id("repository_description"));
-            var description = $"Solution to this {problemUrl}";
-            repoDescriptionBox.SendKeys(description);
-
-            // scroll down to see Create Repository button
-            var createRepoButton = driver.FindElement(By.ClassName("first-in-line"));
-            ScrollAndClick(createRepoButton);
-
-            void ClickMainButtonOnPage() => GetMainButton().Click();
-
-            void ScrollAndClick(IWebElement element)
-            {
-                ((IJavaScriptExecutor)driver).ExecuteScript($"window.scrollTo({element.Location.X},{element.Location.Y})");
-                element.Click();
-            }
-
-            IWebElement GetMainButton() => driver.FindElement(By.ClassName(btnClass));
-
-            driver.Close();
-        }
-        
-        private static void RunCommandViaPS(string directory, string command)
-        {
-            using PowerShell powershell = PowerShell.Create();
-            powershell.AddScript($"cd {directory}");
-            powershell.AddScript(command);
-            Collection<PSObject> results = powershell.Invoke();
-        }
-
-        private static void ReplaceTestFileTokenInLaunchJson(string implClassName, string dir)
-        {
-            var path = Path.Combine(dir, @".vscode\launch.json");
-            var text = File.ReadAllText(path);
-            text = text.Replace(TestNameTokenReplace, implClassName + "Tests");
-            File.WriteAllText(path, text);
-        }
-
-        // from tboswell's answer on
-        // https://stackoverflow.com/questions/58744/copy-the-entire-contents-of-a-directory-in-c-sharp/58820
-        private static void CopyDirectoryAndAllContents(string sourcePath, string destinationPath)
-        {
-            // Now Create all of the directories
-            foreach (string dirPath in Directory.GetDirectories(sourcePath, "*",
-                SearchOption.AllDirectories))
-                Directory.CreateDirectory(dirPath.Replace(sourcePath, destinationPath));
-
-            // Copy all the files & Replaces any files with the same name
-            foreach (string newPath in Directory.GetFiles(sourcePath, "*.*",
-                SearchOption.AllDirectories))
-                File.Copy(newPath, newPath.Replace(sourcePath, destinationPath), true);
         }
     }
 }
