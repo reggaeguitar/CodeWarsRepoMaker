@@ -35,7 +35,11 @@ namespace CodeWarsRepoMaker
             git.MakeGitHubRepo(dir, inputArgs, Orgname, Username);
 
             // open vscode
-            new PowershellRunner().RunCommandViaPS(dir, "code .");
+            if (inputArgs.Language == Language.Ruby)
+            {
+                new PowershellRunner().RunCommandViaPS(dir, "code .");
+            }
+            // todo open visual studio for F#
             Console.WriteLine("Done successfully");
         }
     }
