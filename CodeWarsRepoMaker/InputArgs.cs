@@ -6,16 +6,16 @@
         public string ImplClassName { get; private set; }
         public string ProblemUrl { get; private set; }
         public bool CreateGitHubRepo { get; private set; }
-        public string GitHubPassword { get; private set; }
+        public string GitHubPassword { get; set; }
         public Language Language { get; private set; }
-        public InputArgs(string repoName, string implClassName, string problemUrl, bool createGitHubRepo, string gitHubPassword, Language language)
+        public InputArgs(string repoName, string implClassName, string problemUrl, bool createGitHubRepo, Language language)
         {
             RepoName = repoName;
             ImplClassName = implClassName;
             ProblemUrl = problemUrl;
             CreateGitHubRepo = createGitHubRepo;
-            GitHubPassword = gitHubPassword;
             Language = language;
         }
+       
     }
 }
