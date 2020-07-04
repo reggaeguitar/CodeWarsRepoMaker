@@ -7,23 +7,17 @@ namespace CodeWarsRepoMaker
     public class RubyRepoMaker : IRepoMaker
     {
         const string TestNameTokenReplace = "${TestNameTokenReplace}";
-        public string BaseDir { get; private set; }
-
-        public RubyRepoMaker(string baseDir)
+        
+        public string MakeRepo(string baseDir, string repoName, string implClassName)
         {
-            BaseDir = baseDir;
-        }
-
-        public string MakeRepo(string repoName, string implClassName)
-        {
-            var dir = Path.Join(BaseDir, repoName);
+            var dir = Path.Join(baseDir, repoName);
             if (Directory.Exists(dir))
             {
                 throw new Exception($"Directory {dir} already exists");
             }
-            var rubyScaffoldDir = Path.Join(BaseDir, "RubyScaffold");
+            var rubyScaffoldDir = Path.Join(baseDir, "RubyScaffold");
             // copy everything from scaffold folder and rename
-            CopyDirectoryAndAllContents(rubyScaffoldDir, dir);
+            new DirectoryCopier().CopyDirectoryAndAllContents(rubyScaffoldDir, dir);
             // replace token with test filename in launch.json
             ReplaceTestFileTokenInLaunchJson(implClassName, dir);
             // add implClass and test file
@@ -40,21 +34,6 @@ end" + Environment.NewLine + Environment.NewLine;
                 fs.Write(asBytes);
             }
             return dir;
-        }
-
-        // from tboswell's answer on
-        // https://stackoverflow.com/questions/58744/copy-the-entire-contents-of-a-directory-in-c-sharp/58820
-        private static void CopyDirectoryAndAllContents(string sourcePath, string destinationPath)
-        {
-            // Now Create all of the directories
-            foreach (string dirPath in Directory.GetDirectories(sourcePath, "*",
-                SearchOption.AllDirectories))
-                Directory.CreateDirectory(dirPath.Replace(sourcePath, destinationPath));
-
-            // Copy all the files & Replaces any files with the same name
-            foreach (string newPath in Directory.GetFiles(sourcePath, "*.*",
-                SearchOption.AllDirectories))
-                File.Copy(newPath, newPath.Replace(sourcePath, destinationPath), true);
         }
 
         private static void ReplaceTestFileTokenInLaunchJson(string implClassName, string dir)

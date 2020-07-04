@@ -2,6 +2,6 @@
 {
     interface IRepoMaker
     {
-        string MakeRepo(string repoName, string implClassName);
+        string MakeRepo(string baseDir,string repoName, string implClassName);
     }
 }

@@ -1,10 +1,4 @@
-﻿using OpenQA.Selenium;
-using OpenQA.Selenium.Firefox;
-using System;
-using System.Collections.ObjectModel;
-using System.IO;
-using System.Management.Automation;
-using System.Text;
+﻿using System;
 
 namespace CodeWarsRepoMaker
 {
@@ -34,14 +28,9 @@ namespace CodeWarsRepoMaker
 
             var inputArgs = input.GetInput();
 
-            IRepoMaker repoMaker = null;
-            switch (inputArgs.Language)
-            {
-                case Language.Ruby:
-                    repoMaker = new RubyRepoMaker(BaseDir);                    
-                    break;
-            }
-            var dir = repoMaker.MakeRepo(inputArgs.RepoName, inputArgs.ImplClassName);
+            IRepoMaker repoMaker = new RepoMakerFactory().Create(inputArgs.Language);
+           
+            var dir = repoMaker.MakeRepo(BaseDir, inputArgs.RepoName, inputArgs.ImplClassName);
 
             git.MakeGitHubRepo(dir, inputArgs, Orgname, Username);
 
